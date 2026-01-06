@@ -162,9 +162,32 @@ public class WebServiceManager implements ApplicationRunner {
     }
     
     // -------------------------- PHOTO --------------------------    
+
+ // Tailles d'affichage
+    private static final int IMG_WIDTH = 150;
+    private static final int IMG_HEIGHT = 120;
+
+    // Cache mémoire >> clé = agence + uri
+    private final Map<String, ImageIcon> imageCache = new HashMap<>();
+
     public ImageIcon loadChambreImage(String agenceName, String imageUri) {
+
+        if (agenceName == null || imageUri == null) {
+            return null;
+        }
+
+        String cacheKey = agenceName + imageUri;
+
+        // si y'a le cache
+        ImageIcon cached = imageCache.get(cacheKey);
+        if (cached != null) {
+            return cached;
+        }
+
+        // si y'a pas le cache
         try {
-            byte[] data = agences.get(agenceName).get()
+            byte[] data = agences.get(agenceName)
+                .get()
                 .uri(uriBuilder -> uriBuilder
                     .path("/agences/{agenceName}/photo")
                     .queryParam("pictureUri", imageUri)
@@ -177,17 +200,27 @@ public class WebServiceManager implements ApplicationRunner {
                 return null;
             }
 
-            ImageIcon icon = new ImageIcon(data);
-            Image scaled = icon.getImage()
-                    .getScaledInstance(150, 120, Image.SCALE_SMOOTH);
+            ImageIcon original = new ImageIcon(data);
+            Image scaled = original.getImage()
+                    .getScaledInstance(IMG_WIDTH, IMG_HEIGHT, Image.SCALE_SMOOTH);
 
-            return new ImageIcon(scaled);
+            ImageIcon finalIcon = new ImageIcon(scaled);
+
+            // Mise en cache
+            imageCache.put(cacheKey, finalIcon);
+
+            return finalIcon;
 
         } catch (Exception e) {
+            System.err.println(
+                "Erreur chargement image " + imageUri +
+                " depuis agence " + agenceName
+            );
             e.printStackTrace();
             return null;
         }
     }
+
 
 
 
